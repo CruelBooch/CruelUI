@@ -1,7 +1,6 @@
 #include "CrGraphics.h"
 #include "CruelUI.h"
 
-
 namespace CruelUI
 {
 	ID2D1Factory* pD2DFactory = nullptr;
@@ -55,6 +54,74 @@ namespace CruelUI
 		SafeRelease(&pDWriteFactory);
 	}
 
+	Font::Font()
+	{
+	}
+
+	Font::Font(std::wstring fontName, float fontSize, bool isBold, bool isItalic)
+	{
+		this->fontName = fontName;
+		this->fontSize = fontSize;
+		this->isBold = isBold;
+		this->isItalic = isItalic;
+	}
+
+	void Font::SetTextHeight(float width)
+	{
+	}
+
+	void Font::SetAlignment(int flags)
+	{
+		if (flags & CRDT_LEFT)
+		{
+			pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+		}
+		else if (flags & CRDT_RIGHT)
+		{
+			pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_TRAILING);
+		}
+		if (flags & CRDT_TOP)
+		{
+			pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
+		}
+		else if (flags & CRDT_BOTTOM)
+		{
+			pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_FAR);
+		}
+		if (flags & CRDT_VCENTER)
+		{
+			pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+		}
+		if (flags & CRDT_HCENTER)
+		{
+			pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+		}
+	}
+
+	void Font::Init()
+	{
+		pDWriteFactory->CreateTextFormat(
+			fontName.c_str(),
+			NULL,
+			isBold ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_NORMAL,
+			isItalic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_NORMAL,
+			fontSize,
+			L"zh-CN",
+			&pTextFormat
+		);
+	}
+
+	void Font::Release()
+	{
+		SafeRelease(&pTextFormat); 
+		SafeRelease(&pTextLayout);
+	}
+
+	Graphics::Graphics()
+	{
+	}
+
 	void Graphics::Init(HWND hwnd)
 	{
 		HRESULT hr = pD2DFactory->CreateHwndRenderTarget(
@@ -85,6 +152,13 @@ namespace CruelUI
 			D2D1::ColorF(0x000000, 1.0f),
 			&pLineBrush
 		);
+
+		pRenderTarget->CreateSolidColorBrush(
+			D2D1::ColorF(0x000000, 1.0f),
+			&pTextBrush
+		);
+
+		font.Init();
 	}
 
 	void Graphics::Release()
@@ -92,6 +166,60 @@ namespace CruelUI
 		SafeRelease(&pRenderTarget);
 		SafeRelease(&pFillBrush);
 		SafeRelease(&pLineBrush);
+		SafeRelease(&pTextBrush);
+		font.Release();
+	}
+
+	void Graphics::SetFont(Font font)
+	{
+		this->font = font;
+	}
+
+	void Graphics::SetFont(std::wstring fontName, int fontSize, bool isBold, bool isItalic)
+	{
+		this->font = Font(fontName, fontSize, isBold, isItalic);
+		this->font.Init();
+	}
+
+	void Graphics::SetTextAlignment(int flags)
+	{
+		font.SetAlignment(flags);
+	}
+
+	void Graphics::Clear(const COLORF& color)
+	{
+		pRenderTarget->Clear(color);
+	}
+
+	void Graphics::DrawText_(const std::wstring& text, const RECTF& rect)
+	{
+		pRenderTarget->DrawText(
+			text.c_str(),
+			text.length(),
+			font.pTextFormat,
+			rect,
+			pTextBrush
+		);
+	}
+
+	void Graphics::SetTextColor(const COLORF& color)
+	{
+		pTextBrush->SetColor(color);
+	}
+
+	void Graphics::SetFillColor(const COLORF& color)
+	{
+		pFillBrush->SetColor(color);
+	}
+
+	void Graphics::SetLineColor(const COLORF& color)
+	{
+		pLineBrush->SetColor(color);
+	}
+
+	void Graphics::SetLineWidth(float width)
+	{
+		LineWidth = width;
 	}
 
 	void Graphics::DrawRectangle(const RECTF& rect)
@@ -197,67 +325,6 @@ namespace CruelUI
 		else
 		{
 			Log(L"Render Target is NULL", LERROR);
-		}
-	}
-
-	Font::Font()
-	{
-		pDWriteFactory->CreateTextFormat(
-			L"Microsoft YaHei",
-			NULL,
-			DWRITE_FONT_WEIGHT_NORMAL,
-			DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL,
-			16.0f,
-			L"zh-CN",
-			&pTextFormat
-		);
-	}
-
-	Font::Font(std::wstring fontName, float fontSize, bool isBold, bool isItalic)
-	{
-		pDWriteFactory->CreateTextFormat(
-			fontName.c_str(),
-			NULL,
-			isBold ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_NORMAL,
-			isItalic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL,
-			fontSize,
-			L"zh-CN",
-			&pTextFormat
-		);
-	}
-
-	void Font::SetTextHeight(float width)
-	{
-
-	}
-
-	void Font::SetAlignment(int flags)
-	{
-		if (flags & CRDT_LEFT)
-		{
-			pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
-		}
-		else if (flags & CRDT_RIGHT)
-		{
-			pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_TRAILING);
-		}
-		if (flags & CRDT_TOP)
-		{
-			pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
-		}
-		else if (flags & CRDT_BOTTOM)
-		{
-			pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_FAR);
-		}
-		if (flags & CRDT_VCENTER)
-		{
-			pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-		}
-		if (flags & CRDT_HCENTER)
-		{
-			pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
 		}
 	}
 }

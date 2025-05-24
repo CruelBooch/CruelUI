@@ -2,6 +2,7 @@
 #include "CrDef.h"
 #include "CrWindow.h"
 #include "CruelUI.h"
+#include "CrGraphics.h"
 
 namespace CruelUI
 {
@@ -96,56 +97,89 @@ namespace CruelUI
 	//绘制按钮
 	void Button::OnPaint()
 	{
-		ID2D1SolidColorBrush* pFillBrush = NULL;
-		ID2D1SolidColorBrush* pBorderBrush = NULL;
-		ID2D1SolidColorBrush* pTextBrush = nullptr;
-		IDWriteTextFormat* pTextFormat = nullptr;
+		//ID2D1SolidColorBrush* pFillBrush = NULL;
+		//ID2D1SolidColorBrush* pBorderBrush = NULL;
+		//ID2D1SolidColorBrush* pTextBrush = nullptr;
+		//IDWriteTextFormat* pTextFormat = nullptr;
 
-		D2D1::ColorF border_color(1, 0, 1, 1);
-		D2D1::ColorF fill_color(1, 0, 1, 1);
+		//D2D1::ColorF border_color(1, 0, 1, 1);
+		//D2D1::ColorF fill_color(1, 0, 1, 1);
 
+		//switch (State)
+		//{
+		//case Hovered:
+		//	border_color = Theme.Colors[CrColor_ButtonHovered];
+		//	fill_color = Theme.Colors[CrColor_ButtonHovered];
+		//	break;
+		//case LBClick:
+		//case RBClick:
+		//case MBClick:
+		//case Actived:
+		//	border_color = Theme.Colors[CrColor_ButtonActived];
+		//	fill_color = Theme.Colors[CrColor_ButtonActived];
+		//	break;
+		//case Disabled:
+		//	border_color = Theme.Colors[CrColor_ButtonDisabled];
+		//	fill_color = Theme.Colors[CrColor_ButtonDisabled];
+		//default:
+		//	border_color = Theme.Colors[CrColor_Button];
+		//	fill_color = Theme.Colors[CrColor_Button];
+		//}
+
+		//Parent->GetpRT()->CreateSolidColorBrush(
+		//	border_color,
+		//	&pBorderBrush
+		//);
+		//Parent->GetpRT()->CreateSolidColorBrush(
+		//	fill_color,
+		//	&pFillBrush
+		//);
+		//Parent->GetpRT()->FillRoundedRectangle(
+		//	{ Rect, Radius, Radius },
+		//	pFillBrush
+		//	);
+		//Parent->GetpRT()->DrawRoundedRectangle(
+		//	{ Rect, Radius, Radius },
+		//	pBorderBrush,
+		//	0.5f
+		//	);
+
+		//// 释放资源
+		//SafeRelease(&pFillBrush);
+		//SafeRelease(&pBorderBrush);
+		Graphics* p_graphics = Parent->GetpGraphics();
+
+		p_graphics->SetTextColor(Theme.Colors[CrColor_Text]);
+		p_graphics->SetFont(L"Microsoft YaHei", 14.0f, false, false);
+		p_graphics->SetTextAlignment(CRDT_CENTER);
+		
 		switch (State)
 		{
 		case Hovered:
-			border_color = Theme.Colors[CrColor_ButtonHovered];
-			fill_color = Theme.Colors[CrColor_ButtonHovered];
+			p_graphics->SetLineColor(Theme.Colors[CrColor_ButtonHovered]);
+			p_graphics->SetFillColor(Theme.Colors[CrColor_ButtonHovered]);
 			break;
 		case LBClick:
 		case RBClick:
 		case MBClick:
 		case Actived:
-			border_color = Theme.Colors[CrColor_ButtonActived];
-			fill_color = Theme.Colors[CrColor_ButtonActived];
+			p_graphics->SetLineColor(Theme.Colors[CrColor_ButtonActived]);
+			p_graphics->SetFillColor(Theme.Colors[CrColor_ButtonActived]);
 			break;
 		case Disabled:
-			border_color = Theme.Colors[CrColor_ButtonDisabled];
-			fill_color = Theme.Colors[CrColor_ButtonDisabled];
+			p_graphics->SetLineColor(Theme.Colors[CrColor_ButtonDisabled]);
+			p_graphics->SetFillColor(Theme.Colors[CrColor_ButtonDisabled]);
+			break;
 		default:
-			border_color = Theme.Colors[CrColor_Button];
-			fill_color = Theme.Colors[CrColor_Button];
+			p_graphics->SetLineColor(Theme.Colors[CrColor_Button]);
+			p_graphics->SetFillColor(Theme.Colors[CrColor_Button]);
 		}
 
-		Parent->GetpRT()->CreateSolidColorBrush(
-			border_color,
-			&pBorderBrush
-		);
-		Parent->GetpRT()->CreateSolidColorBrush(
-			fill_color,
-			&pFillBrush
-		);
-		Parent->GetpRT()->FillRoundedRectangle(
-			{ Rect, Radius, Radius },
-			pFillBrush
-			);
-		Parent->GetpRT()->DrawRoundedRectangle(
-			{ Rect, Radius, Radius },
-			pBorderBrush,
-			0.5f
-			);
 
-		// 释放资源
-		SafeRelease(&pFillBrush);
-		SafeRelease(&pBorderBrush);
+		p_graphics->SolidRoundRect(Rect, 5.0f, 5.0f);
+		p_graphics->DrawRoundRect(Rect, 5.0f, 5.0f);
+
+		p_graphics->DrawText_(Content, Rect);
 	}
 
 	//设置回调函数

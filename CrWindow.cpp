@@ -1,7 +1,6 @@
 #include "CrWindow.h"
 #include "CrWidgets.h"
 #include "CruelUI.h"
-#include "CrGraphics.h"
 
 
 #include <chrono>
@@ -15,88 +14,6 @@ namespace CruelUI
 	bool									isInit = false;							//是否初始化
 	std::unordered_map<HWND, Window*>		CrWindows;								//窗口列表
 	CruelUIStyle Dark, Light, Theme;
-
-	void LaunchWindow(std::wstring title, int width, int height, int nCmdShow, Window* wnd)
-	{
-		// 初始化
-		if (!isInit)
-		{
-			// 注册窗口类
-			CruelUIMainWndClass.cbSize = sizeof(WNDCLASSEX);
-			CruelUIMainWndClass.lpfnWndProc = CrWindowProc;
-			CruelUIMainWndClass.lpszClassName = L"CruelUI";
-			CruelUIMainWndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-			CruelUIMainWndClass.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-			if (CruelUIMainWndClass.hInstance == NULL)
-				CruelUIMainWndClass.hInstance = GetModuleHandle(NULL);
-
-			RegisterClassEx(&CruelUIMainWndClass);
-
-			isInit = true;
-
-			InitColor();
-
-			// 初始化D2D	
-			InitD2D();
-		}
-
-		// 创建窗口
-		wnd->hWnd = CreateWindowEx(
-			0,
-			CruelUIMainWndClass.lpszClassName,
-			(wchar_t*)title.c_str(),
-			WS_OVERLAPPEDWINDOW,
-			CW_USEDEFAULT, CW_USEDEFAULT, width, height,
-			NULL, NULL, CruelUIMainWndClass.hInstance, NULL
-		);		
-
-		if (wnd->hWnd == NULL)
-		{
-			Log(L"Create window failed", LERROR);
-			return;
-		}
-		
-		Log(L"Window is Ready", LINFO);
-		wnd->isAlive = true;
-
-		// 将窗口添加到列表
-		CrWindows.emplace(wnd->hWnd, wnd);
-
-		// 显示
-		ShowWindow(wnd->hWnd, SW_SHOW);
-
-		// 渲染线程
-		std::thread RenderThread(Render, wnd);	
-		
-		RenderThread.detach();
-
-		// 计数
-		WndCount++;
-
-		// 消息循环
-		MSG msg = { };
-		while (true)
-		{
-			MSG msg;
-			while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-				if (msg.message == WM_QUIT)
-					break;
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
-
-			// 处理消息
-			wnd->OnMessage(msg);
-
-			Sleep(10);
-		}
-
-		wnd->isAlive = false;
-
-		// 释放资源
-		SafeRelease(&wnd->pRenderTarget);
-		Log(std::wstring(L"[INFO] Window Exit @") + wnd->WindowTitle, LINFO);
-	}
 
 	void Log(const std::wstring& content, int type)
 	{
@@ -130,7 +47,7 @@ namespace CruelUI
 	{
 		//Dark Theme
 		Dark.Colors[CrColor_Text] = COLORF(0xF0F0F0, 1.0f);
-		Dark.Colors[CrColor_Text] = COLORF(0xE0E0E0, 1.0f);
+		Dark.Colors[CrColor_SecondaryText] = COLORF(0xE0E0E0, 1.0f);
 
 		Dark.Colors[CrColor_Button] = COLORF(0x4285F4, 1.0f);
 		Dark.Colors[CrColor_ButtonHovered] = COLORF(0x8AB4F8, 1.0f);
@@ -164,45 +81,6 @@ namespace CruelUI
 		Theme = Light;
 	}
 
-	void Render(Window* wnd)
-	{
-		// 初始化D2D渲染目标
-		RECT rc;
-		GetClientRect(wnd->hWnd, &rc);
-		pD2DFactory->CreateHwndRenderTarget(
-			D2D1::RenderTargetProperties(),
-			D2D1::HwndRenderTargetProperties(
-				wnd->hWnd,
-				D2D1::SizeU(rc.right - rc.left, rc.bottom - rc.top),
-				D2D1_PRESENT_OPTIONS_IMMEDIATELY
-			),
-			&wnd->pRenderTarget
-		);
-
-		//获取窗口标题
-		std::wstring WndTitle = wnd->WindowTitle;
-		Log(std::wstring(L"Render Thread Joined @") + WndTitle, LINFO);
-
-		while (wnd->isAlive)
-		{
-			wnd->pRenderTarget->Resize(D2D1::SizeU(wnd->GetClientRect().right - wnd->GetClientRect().left, wnd->GetClientRect().bottom - wnd->GetClientRect().top));
-
-			wnd->pRenderTarget->BeginDraw();
-
-			wnd->pRenderTarget->Clear(Theme.Colors[CrColor_WndBg]);
-			
-			if (!wnd->Widgets.empty())
-				for (auto& widget : wnd->Widgets)
-					widget.second->OnPaint();
-
-			wnd->pRenderTarget->EndDraw();
-
-			Sleepfor(1000 / 30);
-		}
-
-		Log(std::wstring(L"Render Thread Exited @") + WndTitle, LINFO);
-	}
-
 	void SetAppIcon(HICON hIcon, HICON hIconSm)
 	{
 		if (hIcon != NULL)
@@ -219,8 +97,150 @@ namespace CruelUI
 			CruelUIMainWndClass.hInstance = GetModuleHandle(NULL);
 	}
 
+	void LaunchWindow(std::wstring title, int width, int height, int nCmdShow, Window* wnd)
+	{
+		// 初始化
+		if (!isInit)
+		{
+			// 注册窗口类
+			CruelUIMainWndClass.cbSize = sizeof(WNDCLASSEX);
+			CruelUIMainWndClass.lpfnWndProc = CrWindowProc;
+			CruelUIMainWndClass.lpszClassName = L"CruelUI";
+			CruelUIMainWndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+			CruelUIMainWndClass.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+			if (CruelUIMainWndClass.hInstance == NULL)
+				CruelUIMainWndClass.hInstance = GetModuleHandle(NULL);
+
+			RegisterClassEx(&CruelUIMainWndClass);
+
+			isInit = true;
+
+			InitColor();
+
+			// 初始化D2D	
+			InitD2D();
+		}
+
+		// 创建窗口
+		wnd->hWnd = CreateWindowEx(
+			0,
+			CruelUIMainWndClass.lpszClassName,
+			(wchar_t*)title.c_str(),
+			WS_OVERLAPPEDWINDOW,
+			CW_USEDEFAULT, CW_USEDEFAULT, width, height,
+			NULL, NULL, CruelUIMainWndClass.hInstance, NULL
+		);
+
+		if (wnd->hWnd == NULL)
+		{
+			Log(L"Create window failed", LERROR);
+			return;
+		}
+
+		Log(L"Window is Ready", LINFO);
+		wnd->isAlive = true;
+
+		// 将窗口添加到列表
+		CrWindows.emplace(wnd->hWnd, wnd);
+
+		// 显示
+		ShowWindow(wnd->hWnd, SW_SHOW);
+
+		// 渲染线程
+		std::thread RenderThread(Render, wnd);
+
+		RenderThread.detach();
+
+		// 计数
+		WndCount++;
+
+		// 消息循环
+		MSG msg = { };
+		while (true)
+		{
+			MSG msg;
+			while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+				if (msg.message == WM_QUIT)
+				{
+					wnd->isAlive = false;
+					// 释放资源
+					SafeRelease(&wnd->pRenderTarget);
+					Log(std::wstring(L"[INFO] Window Exit @") + wnd->WindowTitle, LINFO);
+
+					return;
+				}
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+
+			// 处理消息
+			wnd->OnMessage(msg);
+
+			Sleep(10);
+		}
+	}
+
+	void Render(Window* wnd)
+	{
+		// 初始化D2D渲染目标
+		RECT rc;
+		GetClientRect(wnd->hWnd, &rc);
+		pD2DFactory->CreateHwndRenderTarget(
+			D2D1::RenderTargetProperties(),
+			D2D1::HwndRenderTargetProperties(
+				wnd->hWnd,
+				D2D1::SizeU(rc.right - rc.left, rc.bottom - rc.top),
+				D2D1_PRESENT_OPTIONS_IMMEDIATELY
+			),
+			&wnd->pRenderTarget
+		);
+		
+		//获取画布指针
+		Graphics* p_graphics = &wnd->MainGraphics;
+
+		p_graphics->Init(wnd->hWnd);
+
+		//获取窗口标题
+		std::wstring WndTitle = wnd->WindowTitle;
+		Log(std::wstring(L"Render Thread Joined @") + WndTitle, LINFO);
+
+		while (wnd->isAlive)
+		{
+			p_graphics->Resize(wnd->GetClientRect().right - wnd->GetClientRect().left, wnd->GetClientRect().bottom - wnd->GetClientRect().top);
+
+			p_graphics->BeginDraw();
+
+			p_graphics->Clear(Theme.Colors[CrColor_WndBg]);
+
+			if (!wnd->Widgets.empty())
+				for (auto& widget : wnd->Widgets)
+					widget.second->OnPaint();
+
+			p_graphics->EndDraw();
+
+
+			//wnd->pRenderTarget->Resize(D2D1::SizeU(wnd->GetClientRect().right - wnd->GetClientRect().left, wnd->GetClientRect().bottom - wnd->GetClientRect().top));
+
+			//wnd->pRenderTarget->BeginDraw();
+
+			//wnd->pRenderTarget->Clear(Theme.Colors[CrColor_WndBg]);
+			//
+			//if (!wnd->Widgets.empty())
+			//	for (auto& widget : wnd->Widgets)
+			//		widget.second->OnPaint();
+
+			//wnd->pRenderTarget->EndDraw();
+
+			Sleepfor(1000 / 30);
+		}
+
+		p_graphics->Release();
+
+		Log(std::wstring(L"Render Thread Exited @") + WndTitle, LINFO);
+	}
+	
 	LRESULT CrWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-	{	
+	{
 		Window* wnd = NULL;	// 窗口对象;
 
 		// 获取窗口对象
@@ -258,8 +278,11 @@ namespace CruelUI
 
 	void Window::Create()
 	{
-		std::thread(LaunchWindow, WindowTitle, Width, Height, ShowMode, this).detach();
+		//启动窗口
+		if (hWnd == NULL)
+			std::thread(LaunchWindow, WindowTitle, Width, Height, ShowMode, this).detach();
 
+		//while (hWnd == NULL);
 	}
 	 
 	void Window::Show(int nCmdShow) const

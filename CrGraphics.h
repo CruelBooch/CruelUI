@@ -44,16 +44,26 @@ namespace CruelUI
 	{
 	public:
 		Font();
-		Font(std::wstring fontName, float fontSize = 16, bool isBold = false, bool isItalic = false);
+		Font(std::wstring fontName, float fontSize = 12.0f, bool isBold = false, bool isItalic = false);
 
 		//设置文本高度
 		void SetTextHeight(float width);
 		//设置文本对齐方式
 		void SetAlignment(int flags);
+		//初始化
+		void Init();
+		void Release();
 
-	protected:
 		IDWriteTextFormat* pTextFormat = nullptr;	// 文本格式
 		IDWriteTextLayout* pTextLayout = nullptr;	// 文本布局
+	protected:
+		std::wstring fontName;						// 字体名称
+		float fontSize = 12.0f;						// 字体大小
+		bool isBold = false;						// 是否加粗
+		bool isItalic = false;						// 是否斜体
+		bool isUnderline = false;					// 是否下划线
+		bool isStrikeout = false;					// 是否删除线
+		bool isTextHeightSet = false;				// 是否设置文本高度
 	};
 
 	// 画布
@@ -61,22 +71,30 @@ namespace CruelUI
 	{
 	public:
 		Graphics(const Graphics&) = delete;
+		Graphics();
 
 		void Init(HWND hwnd);
 		void Release();
 
 		void BeginDraw() { pRenderTarget->BeginDraw(); }
-		void EndDraw() { pRenderTarget->BeginDraw(); }
+		void EndDraw() { pRenderTarget->EndDraw(); }
 
 		//设置字体
 		void SetFont(Font font);
-		void SetFont(std::wstring fontName, int fontSize = 16, bool isBold = false, bool isItalic = false);
+		void SetFont(std::wstring fontName, int fontSize = 12.0f, bool isBold = false, bool isItalic = false);
+		//获取字体
+		Font GetFont() { return font; }
+		//设置文本对齐方式
+		void SetTextAlignment(int flags);
+
+		void Clear(const COLORF& color);
 
 		//绘制文本
 		void DrawText_(const std::wstring& text, const RECTF& rect);
 		void DrawText_(const std::wstring& text, const POINTF& pos);
 
 		//设置填充颜色
+		void SetTextColor(const COLORF& color);
 		void SetFillColor(const COLORF& color);
 		void SetLineColor(const COLORF& color);
 		void SetLineWidth(float width);
@@ -114,5 +132,7 @@ namespace CruelUI
 		float LineWidth = 1.0f;								// 线条宽度
 		ID2D1SolidColorBrush* pLineBrush = nullptr;			// 线条画刷
 		ID2D1SolidColorBrush* pFillBrush = nullptr;			// 填充画刷
+		ID2D1SolidColorBrush* pTextBrush = nullptr;			// 文本画刷
+		Font font;											// 字体
 	};
 }
